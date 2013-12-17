@@ -27,6 +27,8 @@
 		<org.gatein.portal.version>3.5.7.Final</org.gatein.portal.version>
 		<org.exoplatform.core.version>2.5.6-GA</org.exoplatform.core.version>
 		<org.mongo.version>2.4</org.mongo.version>
+		<log4j.version>1.2.17</log4j.version>
+		<slf4j.version>1.6.1</slf4j.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -40,16 +42,16 @@
 			</dependency>
 			<!-- Import versions from core project -->
 			<dependency>
-			   <groupId>org.exoplatform.core</groupId>
-			   <artifactId>core-parent</artifactId>
+				<groupId>org.exoplatform.core</groupId>
+				<artifactId>core-parent</artifactId>
 				<version>${org.exoplatform.core.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
 			<!-- Import versions from core project -->
 			<dependency>
-			   <groupId>org.exoplatform.core</groupId>
-			   <artifactId>exo.core.component.organization.jdbc</artifactId>
+				<groupId>org.exoplatform.core</groupId>
+				<artifactId>exo.core.component.organization.jdbc</artifactId>
 				<version>${org.exoplatform.core.version}</version>
 			</dependency>
 			<dependency>
@@ -57,6 +59,21 @@
 				<artifactId>mongo-java-driver</artifactId>
 				<version>${org.mongo.version}</version>
 				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>log4j</groupId>
+				<artifactId>log4j</artifactId>
+				<version>${log4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-jdk14</artifactId>
+				<version>${slf4j.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
