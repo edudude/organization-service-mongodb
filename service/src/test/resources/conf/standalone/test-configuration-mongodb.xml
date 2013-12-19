@@ -20,6 +20,10 @@
 				<name>port</name>
 				<value>27777</value>
 			</value-param>
+			<value-param>
+				<name>collection-name</name>
+				<value>organization-test</value>
+			</value-param>
 		</init-params>
 	</component>
 	<import>test-configuration-common.xml</import>

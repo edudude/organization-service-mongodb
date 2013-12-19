@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -60,6 +62,9 @@ public class MongoDBManager implements Startable {
   private DB db;
 
   /** . */
+  private final String collectionName;
+
+  /** . */
   private final String host;
 
   /** . */
@@ -74,10 +79,12 @@ public class MongoDBManager implements Startable {
   public MongoDBManager(InitParams params) {
     ValueParam hostParam = params.getValueParam("host");
     ValueParam portParam = params.getValueParam("port");
+    ValueParam collectionNameParam = params.getValueParam("collection-name");
     ValueParam usernameParam = params.getValueParam("username");
     ValueParam passwordParam = params.getValueParam("password");
 
     this.host = hostParam != null ? hostParam.getValue().trim() : "localhost";
+    this.collectionName = collectionNameParam != null ? collectionNameParam.getValue().trim() : "organization";
     this.port = portParam != null ? Integer.parseInt(portParam.getValue().trim()) : 27017;
     username = usernameParam != null ? usernameParam.getValue().trim() : null;
     password = passwordParam != null ? passwordParam.getValue().trim() : null;
@@ -92,9 +99,12 @@ public class MongoDBManager implements Startable {
     } catch (Exception e) {
       throw new RuntimeException("Error while connecting to mongo DB server.", e);
     }
-    db = mongo.getDB("organization");
+    db = mongo.getDB(collectionName);
     if (username != null && password != null) {
-      db.authenticate(username, password.toCharArray());
+      boolean authenticated = db.authenticate(username, password.toCharArray());
+      if (!authenticated) {
+        throw new IllegalStateException("Cannot connect to MongoDB with credentials.");
+      }
     }
     Set<String> collections = db.getCollectionNames();
     if (collections == null || collections.isEmpty()) {
@@ -129,7 +139,14 @@ public class MongoDBManager implements Startable {
       log.trace("Save or update " + object);
     }
     DBCollection collection = getDBCollection(object);
-    DBObject doc = collection.findOne(getKey(object));
+    DBObject key = getKey(object);
+    DBCursor cursor = collection.find(key);
+    DBObject doc = null;
+    if (cursor.count() > 1) {
+      throw new IllegalStateException("More than one object was found for key: " + key + ", in collection: " + collection.getName());
+    } else if (cursor.count() == 1) {
+      doc = cursor.next();
+    }
     if (doc == null) {
       doc = new BasicDBObject();
       if (object instanceof Membership) {
@@ -159,9 +176,18 @@ public class MongoDBManager implements Startable {
           throw new IllegalStateException("UserProfile " + userProfile + " can't be saved, user doesn't exist.");
         }
       }
+      putFields(doc, object);
+      String error = collection.save(doc).getError();
+      if (error != null && !error.isEmpty()) {
+        throw new IllegalStateException("Error while updating entity: " + doc + ", detail:" + error);
+      }
+    } else {
+      putFields(doc, object);
+      String error = collection.update(key, doc).getError();
+      if (error != null && !error.isEmpty()) {
+        throw new IllegalStateException("Error while updating entity: " + doc + ", detail:" + error);
+      }
     }
-    putFields(doc, object);
-    collection.save(doc);
   }
 
   protected boolean remove(Object object) {
@@ -316,16 +342,20 @@ public class MongoDBManager implements Startable {
     return membership;
   }
 
-  @SuppressWarnings("unchecked")
   private Object toUserProfile(DBObject dbObject) {
     if (dbObject == null) {
       return null;
     }
     UserProfileImpl userProfile = new UserProfileImpl();
     userProfile.setUserName((String) dbObject.get("userName"));
-    userProfile.getUserInfoMap().putAll(dbObject.toMap());
+    Map<?, ?> map = dbObject.toMap();
+    for (Entry<?, ?> entry : map.entrySet()) {
+      String key = changeKey(((String) entry.getKey()), false);
+      if (!key.equals("userName") && !key.equals("_id")) {
+        userProfile.getUserInfoMap().put(key, ((String) entry.getValue()));
+      }
+    }
     userProfile.getUserInfoMap().remove("userName");
-
     return userProfile;
   }
 
@@ -347,11 +377,18 @@ public class MongoDBManager implements Startable {
     if (object instanceof UserProfile) {
       UserProfile userProfile = (UserProfile) object;
       doc.put("userName", userProfile.getUserName());
-      doc.putAll(userProfile.getUserInfoMap());
 
+      // Add UserProfile attributes
+      Map<String, String> map = userProfile.getUserInfoMap();
+      for (Entry<String, String> entry : map.entrySet()) {
+        String key = changeKey(entry.getKey(), true);
+        doc.put(key, entry.getValue());
+      }
+
+      // Delete keys deleting from UserProfile Map
       Iterator<String> iterator = doc.keySet().iterator();
       while (iterator.hasNext()) {
-        String key = iterator.next();
+        String key = changeKey(iterator.next(), false);
         if (!key.equals("userName") && !key.equals("_id") && !userProfile.getUserInfoMap().containsKey(key)) {
           iterator.remove();
         }
@@ -365,6 +402,14 @@ public class MongoDBManager implements Startable {
           doc.put(key, beanMap.get(key));
         }
       }
+    }
+  }
+
+  private String changeKey(String key, boolean replace) {
+    if (replace) {
+      return key.replaceAll("\\.", "@");
+    } else {
+      return key.replaceAll("@", ".");
     }
   }
 
@@ -443,6 +488,7 @@ public class MongoDBManager implements Startable {
 
   @Override
   public void stop() {
+    
   }
 
   public class MongoListAccess<T> implements ListAccess<T>, Serializable {

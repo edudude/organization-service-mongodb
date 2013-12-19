@@ -121,9 +121,49 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-jdk14</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.google.caliper</groupId>
+			<artifactId>caliper</artifactId>
+			<version>1.0-beta-1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>14.0.1</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
+<!-- 			<plugin> -->
+<!-- 				<groupId>com.github.joelittlejohn.embedmongo</groupId> -->
+<!-- 				<artifactId>embedmongo-maven-plugin</artifactId> -->
+<!-- 				<executions> -->
+<!-- 					<execution> -->
+<!-- 						<id>start</id> -->
+<!-- 						<phase>pre-integration-test</phase> -->
+<!-- 						<goals> -->
+<!-- 							<goal>start</goal> -->
+<!-- 						</goals> -->
+<!-- 						<configuration> -->
+<!-- 							<port>27777</port> -->
+<!-- 							<version>2.4.8</version> -->
+<!-- 							<databaseDirectory>${project.build.directory}/mongotest</databaseDirectory> -->
+<!-- 							<logging>file</logging> -->
+<!-- 							<logFile>${project.build.directory}/mongodb.log</logFile> -->
+<!-- 							<logFileEncoding>utf-8</logFileEncoding> -->
+<!-- 							<bindIp>127.0.0.1</bindIp> -->
+<!-- 							<downloadPath>http://internal-mongo-repo/</downloadPath> -->
+<!-- 						</configuration> -->
+<!-- 					</execution> -->
+<!-- 					<execution> -->
+<!-- 						<id>stop</id> -->
+<!-- 						<phase>post-integration-test</phase> -->
+<!-- 						<goals> -->
+<!-- 							<goal>stop</goal> -->
+<!-- 						</goals> -->
+<!-- 					</execution> -->
+<!-- 				</executions> -->
+<!-- 			</plugin> -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
@@ -146,27 +186,7 @@
 				</configuration>
 				<executions>
 					<execution>
-						<id>hibernate</id>
-						<phase>test</phase>
-						<goals>
-							<goal>test</goal>
-						</goals>
-						<configuration>
-							<skip>false</skip>
-							<systemProperties>
-								<property>
-									<name>orgservice.test.configuration.file</name>
-									<value>/conf/standalone/test-configuration-hibernate.xml</value>
-								</property>
-								<property>
-									<name>orgservice.test.configuration.skipDateTests</name>
-									<value>false</value>
-								</property>
-							</systemProperties>
-						</configuration>
-					</execution>
-					<execution>
-						<id>jdbc</id>
+						<id>mongodb</id>
 						<phase>test</phase>
 						<goals>
 							<goal>test</goal>
@@ -182,9 +202,48 @@
 									<name>orgservice.test.configuration.skipDateTests</name>
 									<value>true</value>
 								</property>
+								<property>
+									<name>de.flapdoodle.embed.io.tmpdir</name>
+									<value>${project.build.directory}</value>
+								</property>
+								<property>
+									<name>java.io.tmpdir</name>
+									<value>${project.build.directory}</value>
+								</property>
 							</systemProperties>
 						</configuration>
 					</execution>
+					<!-- <execution> -->
+					<!-- <id>caliper</id> -->
+					<!-- <phase>test</phase> -->
+					<!-- <goals> -->
+					<!-- <goal>test</goal> -->
+					<!-- </goals> -->
+					<!-- <configuration> -->
+					<!-- <skip>false</skip> -->
+					<!-- <systemProperties> -->
+					<!-- <property> -->
+					<!-- <name>orgservice.test.configuration.file</name> -->
+					<!-- <value>/conf/standalone/test-configuration-jdbc.xml</value> -->
+					<!-- </property> -->
+					<!-- <property> -->
+					<!-- <name>orgservice.test.configuration.skipDateTests</name> -->
+					<!-- <value>true</value> -->
+					<!-- </property> -->
+					<!-- <property> -->
+					<!-- <name>log4j.configuration</name> -->
+					<!-- <value>file:${project.build.testOutputDirectory}/log4j.properties</value> -->
+					<!-- </property> -->
+					<!-- </systemProperties> -->
+					<!-- <includes> -->
+					<!-- <include>org/exoplatform/extension/organization/test/TestBenchmark.java</include> -->
+					<!-- </includes> -->
+					<!-- <excludes> -->
+					<!-- <exclude>org/exoplatform/extension/organization/benchmark/*.java</exclude> -->
+					<!-- <exclude>org/exoplatform/services/tck/organization/Test*.java</exclude> -->
+					<!-- </excludes> -->
+					<!-- </configuration> -->
+					<!-- </execution> -->
 				</executions>
 			</plugin>
 			<plugin>
@@ -255,7 +314,7 @@
 						<id>prepare-test-policy</id>
 						<phase>process-test-resources</phase>
 						<configuration>
-							<tasks>
+							<target>
 								<echo>Creating Access Policy for tests</echo>
 								<makeurl file="${settings.localRepository}" property="localRepositoryURL" />
 								<makeurl file="${project.build.outputDirectory}"
@@ -273,7 +332,7 @@
 										<filter token="TEST_CLASSES" value="${testOutputDirectoryURL}" />
 									</filterset>
 								</copy>
-							</tasks>
+							</target>
 						</configuration>
 						<goals>
 							<goal>run</goal>

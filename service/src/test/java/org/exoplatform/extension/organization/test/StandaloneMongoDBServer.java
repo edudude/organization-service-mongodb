@@ -35,6 +35,7 @@ public class StandaloneMongoDBServer implements Startable {
   protected MongodProcess mongod;
 
   public StandaloneMongoDBServer() {
+    // To be sure that it starts in time
     start();
   }
 
@@ -63,10 +64,13 @@ public class StandaloneMongoDBServer implements Startable {
   @Override
   public void stop() {
     if (mongodExe != null) {
-      if (mongod != null) {
-        mongod.stop();
-      }
       mongodExe.stop();
+    }
+    // To be sure that it stops in time
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      log.error(e);
     }
   }
 }
