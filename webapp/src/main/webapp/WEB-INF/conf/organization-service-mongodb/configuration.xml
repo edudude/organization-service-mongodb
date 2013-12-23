@@ -19,8 +19,8 @@
 				<value>${mongodb.port:27017}</value>
 			</value-param>
 			<value-param>
-				<name>collection-name</name>
-				<value>${mongodb.port:organization-plf}</value>
+				<name>db-name</name>
+				<value>${mongodb.db.name:organization-plf}</value>
 			</value-param>
 		</init-params>
 	</component>

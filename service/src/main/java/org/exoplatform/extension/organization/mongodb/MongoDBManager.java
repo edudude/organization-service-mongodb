@@ -62,7 +62,7 @@ public class MongoDBManager implements Startable {
   private DB db;
 
   /** . */
-  private final String collectionName;
+  private final String dbName;
 
   /** . */
   private final String host;
@@ -79,12 +79,12 @@ public class MongoDBManager implements Startable {
   public MongoDBManager(InitParams params) {
     ValueParam hostParam = params.getValueParam("host");
     ValueParam portParam = params.getValueParam("port");
-    ValueParam collectionNameParam = params.getValueParam("collection-name");
+    ValueParam dbNameParam = params.getValueParam("db-name");
     ValueParam usernameParam = params.getValueParam("username");
     ValueParam passwordParam = params.getValueParam("password");
 
     this.host = hostParam != null ? hostParam.getValue().trim() : "localhost";
-    this.collectionName = collectionNameParam != null ? collectionNameParam.getValue().trim() : "organization";
+    this.dbName = dbNameParam != null ? dbNameParam.getValue().trim() : "organization";
     this.port = portParam != null ? Integer.parseInt(portParam.getValue().trim()) : 27017;
     username = usernameParam != null ? usernameParam.getValue().trim() : null;
     password = passwordParam != null ? passwordParam.getValue().trim() : null;
@@ -99,7 +99,7 @@ public class MongoDBManager implements Startable {
     } catch (Exception e) {
       throw new RuntimeException("Error while connecting to mongo DB server.", e);
     }
-    db = mongo.getDB(collectionName);
+    db = mongo.getDB(dbName);
     if (username != null && password != null) {
       boolean authenticated = db.authenticate(username, password.toCharArray());
       if (!authenticated) {
@@ -110,22 +110,22 @@ public class MongoDBManager implements Startable {
     if (collections == null || collections.isEmpty()) {
       log.info("Indexing MongoDB Organization Collections.");
 
-      DBCollection collection = getUserDB();
+      DBCollection collection = getUserCollection();
       DBObject dbObject = new BasicDBObject();
       dbObject.put("userName", 1);
       dbObject.put("email", 1);
       collection.ensureIndex(dbObject);
 
-      collection = getUserProfileDB();
+      collection = getUserProfileCollection();
       collection.ensureIndex("userName");
 
-      collection = getGroupDB();
+      collection = getGroupCollection();
       collection.ensureIndex("id");
 
-      collection = getMembershipTypeDB();
+      collection = getMembershipTypeCollection();
       collection.ensureIndex("name");
 
-      collection = getMembershipDB();
+      collection = getMembershipCollection();
       dbObject = new BasicDBObject();
       dbObject.put("userName", 1);
       dbObject.put("groupId", 1);
@@ -153,17 +153,17 @@ public class MongoDBManager implements Startable {
         // verify if Membership entries are existing, switch API need
         Membership membership = (Membership) object;
         DBObject dbObject = new BasicDBObject("userName", membership.getUserName());
-        long count = getUserDB().count(dbObject);
+        long count = getUserCollection().count(dbObject);
         if (count != 1) {
           throw new IllegalStateException("Membership " + membership + " can't be saved, user doesn't exist.");
         }
         dbObject = new BasicDBObject("id", membership.getGroupId());
-        count = getGroupDB().count(dbObject);
+        count = getGroupCollection().count(dbObject);
         if (count != 1) {
           throw new IllegalStateException("Membership " + membership + " can't be saved, group doesn't exist.");
         }
         dbObject = new BasicDBObject("name", membership.getMembershipType());
-        count = getMembershipTypeDB().count(dbObject);
+        count = getMembershipTypeCollection().count(dbObject);
         if (count != 1) {
           throw new IllegalStateException("Membership " + membership + " can't be saved, membershipType doesn't exist.");
         }
@@ -171,7 +171,7 @@ public class MongoDBManager implements Startable {
         // verify if User exists, switch API need
         UserProfile userProfile = (UserProfile) object;
         DBObject dbObject = new BasicDBObject("userName", userProfile.getUserName());
-        long count = getUserDB().count(dbObject);
+        long count = getUserCollection().count(dbObject);
         if (count != 1) {
           throw new IllegalStateException("UserProfile " + userProfile + " can't be saved, user doesn't exist.");
         }
@@ -200,30 +200,30 @@ public class MongoDBManager implements Startable {
     }
     if (object instanceof UserImpl) {
       UserImpl user = (UserImpl) object;
-      getMembershipDB().remove(new BasicDBObject("userName", user.getUserName()));
-      getUserProfileDB().remove(new BasicDBObject("userName", user.getUserName())).getN();
-      count = getUserDB().remove(new BasicDBObject("userName", user.getUserName())).getN();
+      getMembershipCollection().remove(new BasicDBObject("userName", user.getUserName()));
+      getUserProfileCollection().remove(new BasicDBObject("userName", user.getUserName())).getN();
+      count = getUserCollection().remove(new BasicDBObject("userName", user.getUserName())).getN();
     } else if (object instanceof GroupImpl) {
       GroupImpl group = (GroupImpl) object;
 
-      int childCount = getGroupDB().find(new BasicDBObject("parentId", group.getId())).count();
+      int childCount = getGroupCollection().find(new BasicDBObject("parentId", group.getId())).count();
       if (childCount > 0) {
         throw new RuntimeException("Can't remove a group that have children.");
       }
 
-      getMembershipDB().remove(new BasicDBObject("groupId", group.getId()));
-      count = getGroupDB().remove(new BasicDBObject("id", group.getId())).getN();
+      getMembershipCollection().remove(new BasicDBObject("groupId", group.getId()));
+      count = getGroupCollection().remove(new BasicDBObject("id", group.getId())).getN();
     } else if (object instanceof MembershipTypeImpl) {
       MembershipTypeImpl membershipType = (MembershipTypeImpl) object;
-      getMembershipDB().remove(new BasicDBObject("membershipType", membershipType.getName()));
-      count = getMembershipTypeDB().remove(new BasicDBObject("name", membershipType.getName())).getN();
+      getMembershipCollection().remove(new BasicDBObject("membershipType", membershipType.getName()));
+      count = getMembershipTypeCollection().remove(new BasicDBObject("name", membershipType.getName())).getN();
     } else if (object instanceof MembershipImpl) {
       MembershipImpl membership = (MembershipImpl) object;
       DBObject requestScope = new BasicDBObject("id", membership.getId());
-      count = getMembershipDB().remove(requestScope).getN();
+      count = getMembershipCollection().remove(requestScope).getN();
     } else if (object instanceof UserProfileImpl) {
       UserProfileImpl userProfile = (UserProfileImpl) object;
-      count = getUserProfileDB().remove(new BasicDBObject("userName", userProfile.getUserName())).getN();
+      count = getUserProfileCollection().remove(new BasicDBObject("userName", userProfile.getUserName())).getN();
     } else {
       throw new IllegalArgumentException("Object not supported" + object);
     }
@@ -242,7 +242,7 @@ public class MongoDBManager implements Startable {
         dbObjectQuery.put(keys[i], value);
       }
     }
-    return new MongoListAccess<T>(class1, getDB(class1), dbObjectQuery);
+    return new MongoListAccess<T>(class1, getDBCollection(class1), dbObjectQuery);
   }
 
   protected <T> MongoListAccess<T> find(Class<T> class1, String[] keys, String[] values) {
@@ -253,19 +253,19 @@ public class MongoDBManager implements Startable {
         dbObjectQuery.put(keys[i], values[i]);
       }
     }
-    return new MongoListAccess<T>(class1, getDB(class1), dbObjectQuery);
+    return new MongoListAccess<T>(class1, getDBCollection(class1), dbObjectQuery);
   }
 
   protected ListAccess<User> findUsersByGroupId(String groupId) {
     DBObject dbObjectQuery = new BasicDBObject("groupId", groupId);
-    List<?> users = getMembershipDB().distinct("userName", dbObjectQuery);
+    List<?> users = getMembershipCollection().distinct("userName", dbObjectQuery);
     return new UsersListAccess(users);
   }
 
   @SuppressWarnings("unchecked")
   protected <T> T findOne(Class<T> class1, String key, Object value) {
     DBObject dbObjectKey = new BasicDBObject(key, value);
-    DBObject dbObject = getDB(class1).findOne(dbObjectKey);
+    DBObject dbObject = getDBCollection(class1).findOne(dbObjectKey);
 
     if (User.class.isAssignableFrom(class1)) {
       return (T) toUser(dbObject);
@@ -434,17 +434,17 @@ public class MongoDBManager implements Startable {
     }
   }
 
-  private DBCollection getDB(Class<?> class1) {
+  private DBCollection getDBCollection(Class<?> class1) {
     if (User.class.isAssignableFrom(class1)) {
-      return getUserDB();
+      return getUserCollection();
     } else if (Group.class.isAssignableFrom(class1)) {
-      return getGroupDB();
+      return getGroupCollection();
     } else if (MembershipType.class.isAssignableFrom(class1)) {
-      return getMembershipTypeDB();
+      return getMembershipTypeCollection();
     } else if (Membership.class.isAssignableFrom(class1)) {
-      return getMembershipDB();
+      return getMembershipCollection();
     } else if (UserProfile.class.isAssignableFrom(class1)) {
-      return getUserProfileDB();
+      return getUserProfileCollection();
     } else {
       throw new IllegalArgumentException("Object not supported" + class1);
     }
@@ -452,37 +452,37 @@ public class MongoDBManager implements Startable {
 
   private DBCollection getDBCollection(Object object) {
     if (object instanceof UserImpl) {
-      return getUserDB();
+      return getUserCollection();
     } else if (object instanceof Group) {
-      return getGroupDB();
+      return getGroupCollection();
     } else if (object instanceof MembershipType) {
-      return getMembershipTypeDB();
+      return getMembershipTypeCollection();
     } else if (object instanceof Membership) {
-      return getMembershipDB();
+      return getMembershipCollection();
     } else if (object instanceof UserProfile) {
-      return getUserProfileDB();
+      return getUserProfileCollection();
     } else {
       throw new IllegalArgumentException("Object not supported" + object);
     }
   }
 
-  private DBCollection getUserDB() {
+  private DBCollection getUserCollection() {
     return db.getCollection(USERS_COLLECTION);
   }
 
-  private DBCollection getMembershipDB() {
+  private DBCollection getMembershipCollection() {
     return db.getCollection(MEMBERSHIPS_COLLECTION);
   }
 
-  private DBCollection getGroupDB() {
+  private DBCollection getGroupCollection() {
     return db.getCollection(GROUPS_COLLECTION);
   }
 
-  private DBCollection getUserProfileDB() {
+  private DBCollection getUserProfileCollection() {
     return db.getCollection(PROFILES_COLLECTION);
   }
 
-  private DBCollection getMembershipTypeDB() {
+  private DBCollection getMembershipTypeCollection() {
     return db.getCollection(MT_COLLECTION);
   }
 
