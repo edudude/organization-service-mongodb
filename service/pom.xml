@@ -223,7 +223,7 @@
 					<!-- <systemProperties> -->
 					<!-- <property> -->
 					<!-- <name>orgservice.test.configuration.file</name> -->
-					<!-- <value>/conf/standalone/test-configuration-jdbc.xml</value> -->
+					<!-- <value>/conf/standalone/test-configuration-hibernate.xml</value> -->
 					<!-- </property> -->
 					<!-- <property> -->
 					<!-- <name>orgservice.test.configuration.skipDateTests</name> -->

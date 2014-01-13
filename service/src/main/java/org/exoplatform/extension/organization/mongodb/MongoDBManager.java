@@ -110,27 +110,34 @@ public class MongoDBManager implements Startable {
     if (collections == null || collections.isEmpty()) {
       log.info("Indexing MongoDB Organization Collections.");
 
+      DBObject uniquenessOptionDBObject = new BasicDBObject("unique", true);
+
       DBCollection collection = getUserCollection();
       DBObject dbObject = new BasicDBObject();
       dbObject.put("userName", 1);
       dbObject.put("email", 1);
-      collection.ensureIndex(dbObject);
+      collection.ensureIndex(dbObject, uniquenessOptionDBObject);
 
       collection = getUserProfileCollection();
-      collection.ensureIndex("userName");
+      dbObject = new BasicDBObject();
+      dbObject.put("userName", 1);
+      collection.ensureIndex(dbObject, uniquenessOptionDBObject);
 
       collection = getGroupCollection();
-      collection.ensureIndex("id");
+      dbObject = new BasicDBObject();
+      dbObject.put("id", 1);
+      collection.ensureIndex(dbObject, uniquenessOptionDBObject);
 
       collection = getMembershipTypeCollection();
-      collection.ensureIndex("name");
+      dbObject = new BasicDBObject();
+      dbObject.put("name", 1);
+      collection.ensureIndex(dbObject, uniquenessOptionDBObject);
 
       collection = getMembershipCollection();
       dbObject = new BasicDBObject();
       dbObject.put("userName", 1);
       dbObject.put("groupId", 1);
       dbObject.put("id", 1);
-      collection.ensureIndex(dbObject);
     }
   }
 
@@ -488,7 +495,7 @@ public class MongoDBManager implements Startable {
 
   @Override
   public void stop() {
-    
+
   }
 
   public class MongoListAccess<T> implements ListAccess<T>, Serializable {

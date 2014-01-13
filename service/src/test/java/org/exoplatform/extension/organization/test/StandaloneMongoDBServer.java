@@ -66,11 +66,5 @@ public class StandaloneMongoDBServer implements Startable {
     if (mongodExe != null) {
       mongodExe.stop();
     }
-    // To be sure that it stops in time
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      log.error(e);
-    }
   }
 }

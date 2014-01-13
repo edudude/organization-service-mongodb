@@ -21,7 +21,7 @@
 				<value>27777</value>
 			</value-param>
 			<value-param>
-				<name>collection-name</name>
+				<name>db-name</name>
 				<value>organization-test</value>
 			</value-param>
 		</init-params>
